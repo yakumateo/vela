@@ -1,6 +1,6 @@
 import { Edit2, Plus, Phone, Bot, History, ChevronRight } from "lucide-react";
 import { Header } from "../components/Header";
-import { Button } from "../components/ui/Button";
+import { Button } from "../components/ui/button";
 
 export function Profile() {
   const contacts = [

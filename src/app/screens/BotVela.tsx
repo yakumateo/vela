@@ -1,6 +1,6 @@
 import { ArrowLeft, Bot, MessageSquareText } from "lucide-react";
 import { Link } from "react-router";
-import { Button } from "../components/ui/Button";
+import { Button } from "../components/ui/button";
 
 export function BotVela() {
   return (

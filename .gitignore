@@ -31,3 +31,4 @@ src/imports/
 guidelines/
 ATTRIBUTIONS.md
 generate-icons.mjs
+.vercel

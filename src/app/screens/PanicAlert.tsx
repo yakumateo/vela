@@ -1,6 +1,6 @@
 import { ShieldAlert, MapPin, Smartphone, Users, X, Clock } from "lucide-react";
 import { Link } from "react-router";
-import { Button } from "../components/ui/Button";
+import { Button } from "../components/ui/button";
 
 export function PanicAlert() {
   return (

@@ -1,6 +1,6 @@
 import { TriangleAlert, Settings2, HandMetal } from "lucide-react";
 import { Link } from "react-router";
-import { Button } from "../components/ui/Button";
+import { Button } from "../components/ui/button";
 
 export function Radar() {
   const members = [

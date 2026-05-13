@@ -1,7 +1,7 @@
 import { Users, QrCode, Plus } from "lucide-react";
 import { Link } from "react-router";
 import { Header } from "../components/Header";
-import { Button } from "../components/ui/Button";
+import { Button } from "../components/ui/button";
 
 export function Home() {
   return (

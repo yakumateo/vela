@@ -1,6 +1,6 @@
 import { ArrowLeft, Car, Clock, MapPin, Share2, Bot } from "lucide-react";
 import { Link } from "react-router";
-import { Button } from "../components/ui/Button";
+import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/Input";
 
 export function TaxiRegistration() {
