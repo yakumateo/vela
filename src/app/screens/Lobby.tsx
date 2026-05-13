@@ -1,7 +1,7 @@
 import { QrCode, Shield, CheckCircle2, MoreVertical, Loader2, ArrowLeft } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/Input";
+import { Input } from "../components/ui/input";
 
 export function Lobby() {
   const members = [
