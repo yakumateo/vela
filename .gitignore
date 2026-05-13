@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+bot-vela/node_modules/
+
+# Environment variables — NUNCA subir al repo
+.env
+bot-vela/.env
+*.env.local
+
+# Build outputs
+dist/
+build/
+
+# Vite
+.vite/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Figma Make internals
+src/imports/
+guidelines/
+ATTRIBUTIONS.md
+generate-icons.mjs

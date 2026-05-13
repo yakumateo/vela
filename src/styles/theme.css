@@ -1,0 +1,218 @@
+/* ============================================
+   VELA — Theme CSS
+   Seguridad nocturna · Lima, Peru
+   Dark mode only — no light mode
+   ============================================ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root,
+.dark {
+  /* ---- Fondos ---- */
+  --background: #0A0A0F;
+  --foreground: #F0F0F5;
+
+  /* ---- Cards / Superficies ---- */
+  --card: #14141C;
+  --card-foreground: #F0F0F5;
+  --popover: #1E1E2A;
+  --popover-foreground: #F0F0F5;
+
+  /* ---- Marca principal: verde neon (estado seguro) ---- */
+  --primary: #39FF6E;
+  --primary-foreground: #0A0A0F;
+
+  /* ---- Secundario ---- */
+  --secondary: #1E1E2A;
+  --secondary-foreground: #F0F0F5;
+
+  /* ---- Muted / texto secundario ---- */
+  --muted: #1E1E2A;
+  --muted-foreground: #8888AA;
+
+  /* ---- Accent ---- */
+  --accent: #2A2A38;
+  --accent-foreground: #F0F0F5;
+
+  /* ---- Estados semánticos ---- */
+  --destructive: #FF3B30;          /* peligro / pánico */
+  --destructive-foreground: #F0F0F5;
+  --warning: #FFD700;              /* advertencia / timer */
+  --warning-foreground: #0A0A0F;
+  --info: #478BFF;                 /* info neutral */
+
+  /* ---- Bordes e inputs ---- */
+  --border: #2A2A38;
+  --input: #1E1E2A;
+  --input-background: #1E1E2A;
+  --ring: #39FF6E;
+
+  /* ---- Radios ---- */
+  --radius: 0.75rem;
+
+  /* ---- Tipografía ---- */
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-size: 16px;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* ---- Glows (usados con box-shadow) ---- */
+  --glow-primary: 0 0 20px rgba(57, 255, 110, 0.35);
+  --glow-danger: 0 0 20px rgba(255, 59, 48, 0.35);
+  --glow-warning: 0 0 20px rgba(255, 215, 0, 0.35);
+
+  /* ---- Safe area insets (iPhone notch/island) ---- */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@theme inline {
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-input-background:     var(--input-background);
+  --color-ring:                 var(--ring);
+  --radius-sm:  calc(var(--radius) - 4px);
+  --radius-md:  calc(var(--radius) - 2px);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: var(--font-size);
+    font-family: var(--font-sans);
+    background-color: #0A0A0F;
+    color-scheme: dark;
+    /* Evita scroll bounce blanco en iOS */
+    overscroll-behavior: none;
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    height: 100%;
+    /* Padding para iPhone notch/home indicator */
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    /* Sin scroll horizontal */
+    overflow-x: hidden;
+    overscroll-behavior: none;
+  }
+
+  #root {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    max-width: 430px;
+    margin: 0 auto;
+    position: relative;
+    /* Centra la app en pantallas grandes (desktop preview) */
+    background-color: #0A0A0F;
+  }
+
+  h1 { font-size: 1.75rem;  font-weight: 700; line-height: 1.3; }
+  h2 { font-size: 1.375rem; font-weight: 700; line-height: 1.4; }
+  h3 { font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
+  h4 { font-size: 1rem;     font-weight: 600; line-height: 1.5; }
+  p  { line-height: 1.6; }
+
+  /* Fat-finger: ningún botón menor a 56px */
+  button, [role="button"] {
+    min-height: 44px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  button:active { transform: scale(0.97); }
+
+  input, textarea, select {
+    font-family: var(--font-sans);
+    background-color: var(--input-background);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    width: 100%;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus, textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(57, 255, 110, 0.15);
+  }
+
+  /* Scrollbars mínimas en dark */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+}
+
+/* ============================================
+   Utilidades globales de Vela
+   ============================================ */
+
+/* Glow verde — estado seguro */
+.glow-primary {
+  box-shadow: var(--glow-primary);
+}
+
+/* Glow rojo — emergencia */
+.glow-danger {
+  box-shadow: var(--glow-danger);
+}
+
+/* Glow amarillo — advertencia */
+.glow-warning {
+  box-shadow: var(--glow-warning);
+}
+
+/* Pulse animado para el radar */
+@keyframes radar-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.05); }
+}
+.radar-pulse {
+  animation: radar-pulse 3s ease-in-out infinite;
+}
+
+/* Pulse del punto de estado activo */
+@keyframes dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(57, 255, 110, 0.6); }
+  50%       { box-shadow: 0 0 0 6px rgba(57, 255, 110, 0); }
+}
+.dot-pulse {
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+
+/* Página completa para pantallas sin bottom nav */
+.screen-full {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
