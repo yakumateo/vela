@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { QrCode, Shield, CheckCircle2, MoreVertical, Loader2, ArrowLeft } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { QrCode, Shield, CheckCircle2, MoreVertical, Loader2, ArrowLeft, LogOut, Trash2 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { Button } from "../components/ui/button";
 import { motion } from "motion/react";
@@ -7,10 +7,14 @@ import { useAuth } from "../context/AuthContext";
 import { useSession } from "../context/SessionContext";
 import {
   getSession,
+  getSessionMembers,
   updateMemberStatus,
   activateSession,
+  subscribeToSession,
+  leaveSession,
+  endSession
 } from "../../services/session.service";
-import type { Session } from "../../lib/database.types";
+import type { Session, SessionMemberWithProfile } from "../../lib/database.types";
 import { toast } from "sonner";
 
 const AVATAR_PLACEHOLDER = (name: string) =>
@@ -20,17 +24,35 @@ export function Lobby() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { members, refresh } = useSession();
+  const { setActiveSession, refreshSessions } = useSession();
   const [sessionData, setSessionData] = useState<Session | null>(null);
+  const [localMembers, setLocalMembers] = useState<SessionMemberWithProfile[]>([]);
   const [activating, setActivating] = useState(false);
 
   const sessionId = searchParams.get("sid") || "";
 
+  // Load session data
   useEffect(() => {
-    if (!sessionId) { navigate("/home"); return; }
+    if (!sessionId) return; // Don't redirect — wait for params
     getSession(sessionId)
-      .then(setSessionData)
+      .then((s) => {
+        setSessionData(s);
+        setActiveSession(s);
+      })
       .catch(() => { toast.error("Sesión no encontrada"); navigate("/home"); });
+  }, [sessionId]);
+
+  // Load members
+  useEffect(() => {
+    if (!sessionId) return;
+    getSessionMembers(sessionId).then(setLocalMembers).catch(console.error);
+  }, [sessionId]);
+
+  // Subscribe to realtime changes
+  useEffect(() => {
+    if (!sessionId) return;
+    const unsub = subscribeToSession(sessionId, setLocalMembers);
+    return unsub;
   }, [sessionId]);
 
   // Mark self as ready
@@ -39,12 +61,36 @@ export function Lobby() {
     updateMemberStatus(sessionId, user.id, "ready").catch(console.error);
   }, [sessionId, user?.id]);
 
+  // If session goes active, redirect to radar
+  useEffect(() => {
+    if (sessionData?.status === "active") {
+      navigate(`/radar?sid=${sessionId}`);
+    }
+  }, [sessionData?.status]);
+
+  // Subscribe to session status changes (host activates → redirect guests)
+  useEffect(() => {
+    if (!sessionId) return;
+    const interval = setInterval(async () => {
+      try {
+        const s = await getSession(sessionId);
+        if (s.status === "active") {
+          setSessionData(s);
+          setActiveSession(s);
+        }
+      } catch { /* ignore */ }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [sessionId]);
+
   const handleActivate = async () => {
     if (!sessionId) return;
     setActivating(true);
     try {
-      await activateSession(sessionId);
-      await refresh();
+      const updated = await activateSession(sessionId);
+      setSessionData(updated);
+      setActiveSession(updated);
+      await refreshSessions();
       navigate(`/radar?sid=${sessionId}`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Error al activar");
@@ -53,8 +99,50 @@ export function Lobby() {
     }
   };
 
+  const [showMenu, setShowMenu] = useState(false);
+  const [processingOptions, setProcessingOptions] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLeaveSession = async () => {
+    if (!user || !sessionId) return;
+    setProcessingOptions(true);
+    try {
+      await leaveSession(sessionId, user.id);
+      await refreshSessions();
+      toast.success("Has salido del lobby");
+      navigate("/home");
+    } catch (e: any) {
+      toast.error(e.message || "Error al salir");
+      setProcessingOptions(false);
+    }
+  };
+
+  const handleEndSession = async () => {
+    if (!sessionId) return;
+    setProcessingOptions(true);
+    try {
+      await endSession(sessionId);
+      await refreshSessions();
+      toast.success("Salida cancelada");
+      navigate("/home");
+    } catch (e: any) {
+      toast.error(e.message || "Error al cancelar");
+      setProcessingOptions(false);
+    }
+  };
+
   const isHost = sessionData?.host_id === user?.id;
-  const readyCount = members.filter((m) => m.status === "ready").length;
+  const readyCount = localMembers.filter((m) => m.status === "ready").length;
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -62,7 +150,7 @@ export function Lobby() {
   };
   const itemVariants = {
     hidden: { opacity: 0, x: -20 },
-    show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
+    show: { opacity: 1, x: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } },
   };
 
   return (
@@ -77,13 +165,42 @@ export function Lobby() {
             <ArrowLeft size={20} className="text-[#F0F0F5]" />
           </Link>
           <div className="flex items-center gap-2 bg-[#1E1E2A]/80 px-3 py-1.5 rounded-full border border-[#2A2A38] shadow-inner">
-            <div className="w-2 h-2 rounded-full bg-[#39FF6E] shadow-[0_0_8px_#39FF6E80] animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-[#FFD700] shadow-[0_0_8px_rgba(255,215,0,0.5)] animate-pulse" />
             <span className="text-[12px] font-bold text-[#F0F0F5] tracking-wide uppercase">Lobby</span>
           </div>
         </div>
-        <button className="w-10 h-10 flex items-center justify-center hover:bg-[#1E1E2A] rounded-full transition-colors">
-          <MoreVertical size={24} className="text-[#8888AA]" />
-        </button>
+        
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => setShowMenu((prev) => !prev)}
+            className="w-10 h-10 flex items-center justify-center bg-[#1E1E2A]/80 hover:bg-[#2A2A38] rounded-full border border-[#2A2A38] transition-colors"
+          >
+            <MoreVertical size={20} className="text-[#8888AA]" />
+          </button>
+          
+          {showMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-[#1E1E2A] border border-[#2A2A38] rounded-2xl shadow-xl overflow-hidden z-50">
+              <button
+                onClick={handleLeaveSession}
+                disabled={processingOptions}
+                className="w-full text-left px-4 py-3 flex items-center gap-3 text-[#F0F0F5] hover:bg-[#2A2A38] transition-colors text-[14px] font-bold disabled:opacity-50"
+              >
+                {processingOptions ? <Loader2 size={16} className="animate-spin text-[#8888AA]" /> : <LogOut size={16} className="text-[#8888AA]" />}
+                Salir
+              </button>
+              {isHost && (
+                <button
+                  onClick={handleEndSession}
+                  disabled={processingOptions}
+                  className="w-full text-left px-4 py-3 flex items-center gap-3 text-[#FF3B30] hover:bg-[#FF3B30]/10 transition-colors border-t border-[#2A2A38] text-[14px] font-bold disabled:opacity-50"
+                >
+                  {processingOptions ? <Loader2 size={16} className="animate-spin text-[#FF3B30]" /> : <Trash2 size={16} className="text-[#FF3B30]" />}
+                  Eliminar salida
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="px-6 py-6 flex-1 overflow-y-auto no-scrollbar pb-32 relative z-10">
@@ -150,15 +267,15 @@ export function Lobby() {
           >
             Miembros del grupo
             <span className="bg-[#1E1E2A] text-[#39FF6E] text-[13px] px-2.5 py-1 rounded-full border border-[#39FF6E]/20 shadow-inner font-bold">
-              {readyCount}/{members.length}
+              {readyCount}/{localMembers.length}
             </span>
           </motion.h3>
 
           <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex flex-col gap-3">
-            {members.length === 0 ? (
+            {localMembers.length === 0 ? (
               <div className="text-center py-8 text-[#8888AA] text-[15px]">Esperando que se unan...</div>
             ) : (
-              members.map((member, i) => {
+              localMembers.map((member, i) => {
                 const name = member.profiles?.full_name || "Usuario";
                 const avatar = member.profiles?.avatar_url || AVATAR_PLACEHOLDER(name);
                 const ready = member.status === "ready" || member.status === "active";
@@ -209,7 +326,7 @@ export function Lobby() {
           <Button
             variant="primary"
             onClick={handleActivate}
-            disabled={activating || members.length < 1}
+            disabled={activating || localMembers.length < 1}
             className="pointer-events-auto h-[68px] rounded-2xl text-[18px] w-full shadow-[0_8px_32px_rgba(57,255,110,0.25)] hover:shadow-[0_12px_48px_rgba(57,255,110,0.45)] transition-all overflow-hidden relative group disabled:opacity-50"
           >
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
