@@ -164,6 +164,8 @@ export interface Database {
           plate: string;
           app: "Uber" | "InDrive" | "Cabify" | "Taxi normal";
           destination: string;
+          destination_lat: number | null;
+          destination_lng: number | null;
           eta_minutes: number;
           created_at: string;
         };
@@ -174,6 +176,8 @@ export interface Database {
           plate: string;
           app: "Uber" | "InDrive" | "Cabify" | "Taxi normal";
           destination: string;
+          destination_lat?: number | null;
+          destination_lng?: number | null;
           eta_minutes: number;
           created_at?: string;
         };
@@ -181,6 +185,8 @@ export interface Database {
           plate?: string;
           app?: "Uber" | "InDrive" | "Cabify" | "Taxi normal";
           destination?: string;
+          destination_lat?: number | null;
+          destination_lng?: number | null;
           eta_minutes?: number;
         };
       };
@@ -207,6 +213,31 @@ export interface Database {
         };
         Update: {
           returned_at?: string | null;
+        };
+      };
+
+      // ---- saved_destinations ----
+      saved_destinations: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          lat: number | null;
+          lng: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          lat?: number | null;
+          lng?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          name?: string;
+          lat?: number | null;
+          lng?: number | null;
         };
       };
     };
