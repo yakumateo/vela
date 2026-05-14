@@ -2,60 +2,98 @@ import { Flame, ArrowRight, Mail, Lock } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { motion } from "motion/react";
 
 export function Login() {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 15 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  };
+
   return (
-    <div className="flex flex-col h-full px-6 pt-16 pb-8 bg-gradient-to-b from-[#0A0A0F] to-[#0A0A0F] via-[#14141C]/30 relative overflow-hidden">
+    <div className="flex flex-col h-full px-6 pt-16 pb-8 bg-gradient-to-b from-[#0A0A0F] via-[#14141C]/80 to-[#0A0A0F] relative overflow-hidden">
       
-      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-[#39FF6E]/5 rounded-full blur-[120px] pointer-events-none" />
+      {/* Glow animado superior */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 2 }}
+        className="absolute -top-[10%] -right-[10%] w-[400px] h-[400px] bg-[#39FF6E]/5 rounded-full blur-[120px] pointer-events-none" 
+      />
 
-      <div className="flex items-center justify-center gap-3 mb-10">
-        <div className="relative p-3 rounded-2xl bg-[#1E1E2A] border border-[#2A2A38] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-          <Flame size={32} className="text-[#39FF6E] drop-shadow-[0_0_12px_rgba(57,255,110,0.6)]" />
-        </div>
-      </div>
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="flex flex-col flex-1"
+      >
+        <motion.div variants={itemVariants} className="flex items-center justify-center gap-3 mb-10">
+          <div className="relative p-4 rounded-2xl bg-[#1E1E2A]/80 backdrop-blur-md border border-[#39FF6E]/20 shadow-[0_8px_32px_rgba(57,255,110,0.15)] group">
+            <Flame size={36} className="text-[#39FF6E] drop-shadow-[0_0_16px_rgba(57,255,110,0.8)]" />
+          </div>
+        </motion.div>
 
-      <div className="mb-10 text-center">
-        <h1 className="text-[32px] font-bold text-[#F0F0F5] mb-2 tracking-tight">Bienvenida de nuevo</h1>
-        <p className="text-[#8888AA] text-[16px]">Ingresa para protegerte con Vela</p>
-      </div>
+        <motion.div variants={itemVariants} className="mb-12 text-center">
+          <h1 className="text-[36px] font-extrabold text-[#F0F0F5] mb-2 tracking-tight">Bienvenida</h1>
+          <p className="text-[#8888AA] text-[16px] font-medium">Ingresa para protegerte con Vela</p>
+        </motion.div>
 
-      <div className="flex flex-col gap-4 mb-8">
-        <Input 
-          type="email" 
-          placeholder="Correo electrónico" 
-          icon={<Mail size={20} className="opacity-70" />}
-          className="bg-[#1E1E2A]/80 border-[#2A2A38] focus:border-[#39FF6E]/50 focus:bg-[#1E1E2A] shadow-inner text-[16px] h-[60px] rounded-xl pl-12"
-        />
-        <Input 
-          type="password" 
-          placeholder="Contraseña" 
-          icon={<Lock size={20} className="opacity-70" />}
-          className="bg-[#1E1E2A]/80 border-[#2A2A38] focus:border-[#39FF6E]/50 focus:bg-[#1E1E2A] shadow-inner text-[16px] h-[60px] rounded-xl pl-12"
-        />
-      </div>
+        <motion.div variants={itemVariants} className="flex flex-col gap-5 mb-10">
+          <div className="relative group">
+            <Input 
+              type="email" 
+              placeholder="Correo electrónico" 
+              className="bg-[#14141C]/80 border-[#2A2A38] focus:border-[#39FF6E]/50 focus:bg-[#1E1E2A] text-[16px] h-[64px] rounded-2xl pl-14 pr-4 transition-all duration-300 shadow-sm"
+            />
+            <Mail size={22} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#8888AA] group-focus-within:text-[#39FF6E] transition-colors duration-300" />
+          </div>
+          <div className="relative group">
+            <Input 
+              type="password" 
+              placeholder="Contraseña" 
+              className="bg-[#14141C]/80 border-[#2A2A38] focus:border-[#39FF6E]/50 focus:bg-[#1E1E2A] text-[16px] h-[64px] rounded-2xl pl-14 pr-4 transition-all duration-300 shadow-sm"
+            />
+            <Lock size={22} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#8888AA] group-focus-within:text-[#39FF6E] transition-colors duration-300" />
+          </div>
+        </motion.div>
 
-      <Link to="/home" className="block w-full mb-8 group">
-        <Button 
-          variant="primary" 
-          className="w-full text-[18px] h-[60px] flex items-center justify-center gap-2 group-hover:shadow-[0_8px_32px_rgba(57,255,110,0.4)] transition-all"
-        >
-          Ingresar
-          <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-        </Button>
-      </Link>
+        <motion.div variants={itemVariants}>
+          <Link to="/home" className="block w-full mb-8 group">
+            <Button 
+              variant="primary" 
+              className="w-full text-[18px] h-[64px] rounded-2xl flex items-center justify-center gap-2 shadow-[0_8px_32px_rgba(57,255,110,0.2)] hover:shadow-[0_12px_48px_rgba(57,255,110,0.4)] transition-all overflow-hidden relative"
+            >
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+              <span className="relative z-10 font-bold">Ingresar</span>
+              <ArrowRight size={22} className="relative z-10 group-hover:translate-x-1.5 transition-transform duration-300" />
+            </Button>
+          </Link>
+        </motion.div>
 
-      <div className="flex flex-col items-center gap-6 mt-auto">
-        <button className="text-[#8888AA] text-[14px] font-medium hover:text-[#F0F0F5] transition-colors underline decoration-[#8888AA]/30 underline-offset-4">
-          ¿Olvidaste tu contraseña?
-        </button>
-        
-        <div className="h-px w-[120px] bg-gradient-to-r from-transparent via-[#2A2A38] to-transparent my-2" />
+        <motion.div variants={itemVariants} className="flex flex-col items-center gap-6 mt-auto">
+          <button className="text-[#8888AA] text-[15px] font-medium hover:text-[#F0F0F5] transition-colors underline decoration-[#8888AA]/30 underline-offset-4">
+            ¿Olvidaste tu contraseña?
+          </button>
+          
+          <div className="flex items-center gap-4 w-full px-4 my-2">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#2A2A38]" />
+            <span className="text-[#8888AA] text-[13px] font-medium uppercase tracking-wider">o</span>
+            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#2A2A38]" />
+          </div>
 
-        <Link to="/register" className="text-[#8888AA] text-[15px] hover:text-[#F0F0F5] transition-colors">
-          ¿No tienes cuenta? <span className="text-[#39FF6E] font-bold">Regístrate</span>
-        </Link>
-      </div>
+          <Link to="/register" className="text-[#8888AA] text-[16px] hover:text-[#F0F0F5] transition-colors font-medium">
+            ¿No tienes cuenta? <span className="text-[#39FF6E] font-bold border-b-2 border-[#39FF6E]/30 pb-0.5 hover:border-[#39FF6E] transition-colors">Regístrate</span>
+          </Link>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
