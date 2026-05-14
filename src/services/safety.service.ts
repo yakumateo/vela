@@ -9,6 +9,8 @@ export async function registerTaxi(params: {
   plate: string;
   app: TaxiRegistration["app"];
   destination: string;
+  destinationLat?: number;
+  destinationLng?: number;
   etaMinutes: number;
 }): Promise<TaxiRegistration> {
   const { data, error } = await supabase
@@ -19,6 +21,8 @@ export async function registerTaxi(params: {
       plate: params.plate.toUpperCase(),
       app: params.app,
       destination: params.destination,
+      destination_lat: params.destinationLat || null,
+      destination_lng: params.destinationLng || null,
       eta_minutes: params.etaMinutes,
     })
     .select()

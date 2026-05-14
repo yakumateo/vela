@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Edit2, Plus, Phone, Bot, History, ChevronRight, LogOut, Loader2 } from "lucide-react";
+import { Edit2, Plus, Phone, Bot, History, ChevronRight, LogOut, Loader2, MapPin, Navigation } from "lucide-react";
 import { Header } from "../components/Header";
 import { Button } from "../components/ui/button";
 import { useAuth } from "../context/AuthContext";
@@ -10,11 +10,18 @@ import {
   deleteEmergencyContact,
 } from "../../services/contacts.service";
 import { getSessionHistory } from "../../services/session.service";
+import {
+  getSavedDestinations,
+  addSavedDestination,
+  deleteSavedDestination,
+  type SavedDestination
+} from "../../services/destinations.service";
 import type { EmergencyContact } from "../../lib/database.types";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Input } from "../components/ui/input";
+import { AddressAutocomplete } from "../components/AddressAutocomplete";
 
 const AVATAR_PLACEHOLDER = (name: string) =>
   `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1E1E2A&color=39FF6E&bold=true&size=128`;
@@ -31,11 +38,23 @@ export function Profile() {
   const { user, profile, refreshProfile } = useAuth();
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
   const [history, setHistory] = useState<Array<{ id: string; name: string; venue: string | null; duration_minutes: number | null; ended_at: string | null }>>([]);
+  const [destinations, setDestinations] = useState<SavedDestination[]>([]);
+  
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [loadingDestinations, setLoadingDestinations] = useState(true);
+
   const [showAddContact, setShowAddContact] = useState(false);
   const [newContact, setNewContact] = useState({ name: "", relation: "", phone: "" });
   const [savingContact, setSavingContact] = useState(false);
+
+  const [showAddDestination, setShowAddDestination] = useState(false);
+  const [newDestinationName, setNewDestinationName] = useState("");
+  const [addressSearch, setAddressSearch] = useState("");
+  const [newDestinationLat, setNewDestinationLat] = useState<number | null>(null);
+  const [newDestinationLng, setNewDestinationLng] = useState<number | null>(null);
+  const [savingDestination, setSavingDestination] = useState(false);
+  const [locatingDestination, setLocatingDestination] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -49,6 +68,11 @@ export function Profile() {
       .then(setHistory)
       .catch(console.error)
       .finally(() => setLoadingHistory(false));
+      
+    getSavedDestinations(user.id)
+      .then(setDestinations)
+      .catch(console.error)
+      .finally(() => setLoadingDestinations(false));
   }, [user?.id]);
 
   const handleAddContact = async () => {
@@ -73,6 +97,63 @@ export function Profile() {
   const handleDeleteContact = async (id: string) => {
     await deleteEmergencyContact(id).catch((e) => toast.error(e.message));
     setContacts((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const handleLocateDestination = () => {
+    if (!navigator.geolocation) {
+      toast.error("Tu navegador no soporta geolocalización");
+      return;
+    }
+    setLocatingDestination(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setNewDestinationLat(pos.coords.latitude);
+        setNewDestinationLng(pos.coords.longitude);
+        setLocatingDestination(false);
+        toast.success("Ubicación actual obtenida ✓");
+      },
+      (err) => {
+        toast.error("No se pudo obtener la ubicación");
+        setLocatingDestination(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleAddDestination = async () => {
+    if (!user || !newDestinationName.trim()) {
+      toast.error("El nombre del destino es obligatorio");
+      return;
+    }
+    if (destinations.length >= 4) {
+      toast.error("Máximo 4 destinos permitidos");
+      return;
+    }
+    setSavingDestination(true);
+    try {
+      const d = await addSavedDestination(
+        user.id, 
+        newDestinationName.trim(),
+        newDestinationLat || undefined,
+        newDestinationLng || undefined
+      );
+      setDestinations((prev) => [...prev, d]);
+      setNewDestinationName("");
+      setAddressSearch("");
+      setNewDestinationLat(null);
+      setNewDestinationLng(null);
+      setShowAddDestination(false);
+      toast.success("Destino agregado");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Error al guardar destino");
+    } finally {
+      setSavingDestination(false);
+    }
+  };
+
+  const handleDeleteDestination = async (id: string) => {
+    await deleteSavedDestination(id).catch((e) => toast.error(e.message));
+    setDestinations((prev) => prev.filter((d) => d.id !== id));
   };
 
   const handleLogout = async () => {
@@ -180,6 +261,104 @@ export function Profile() {
                 >
                   <Plus size={18} className="mr-2 group-hover:rotate-90 transition-transform duration-300" />
                   Agregar contacto
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Saved Destinations */}
+        <div className="mb-8">
+          <h3 className="text-[14px] font-bold text-[#8888AA] uppercase tracking-widest mb-4 pl-1 flex items-center gap-2">
+            <MapPin size={16} /> Mis destinos frecuentes
+          </h3>
+          <div className="bg-[#14141C] border border-[#2A2A38]/50 rounded-[24px] p-2 flex flex-col gap-2 shadow-sm">
+            {loadingDestinations ? (
+              <div className="flex justify-center py-6"><Loader2 size={24} className="animate-spin text-[#8888AA]" /></div>
+            ) : destinations.length === 0 ? (
+              <p className="text-[#8888AA] text-center text-[14px] py-4">Sin destinos frecuentes aún</p>
+            ) : (
+              destinations.map((dest) => (
+                <div key={dest.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-[#1E1E2A] transition-colors group cursor-pointer">
+                  <div className="flex flex-col">
+                    <span className="font-bold text-[16px] text-[#F0F0F5] flex items-center gap-2">
+                      {dest.name}
+                    </span>
+                    {dest.lat && dest.lng && (
+                      <span className="text-[12px] text-[#8888AA] font-mono mt-0.5 tracking-wide">
+                        {dest.lat.toFixed(4)}, {dest.lng.toFixed(4)}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteDestination(dest.id)}
+                    className="text-[#8888AA] hover:text-[#FF3B30] text-[13px] font-bold px-3 py-1.5 rounded-full hover:bg-[#FF3B30]/10 transition-colors"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              ))
+            )}
+
+            {showAddDestination ? (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-3 mt-2 p-4 bg-[#1E1E2A]/60 rounded-2xl border border-[#2A2A38]"
+              >
+                <div className="flex flex-col gap-2">
+                  <Input
+                    type="text" placeholder="Nombre (ej. Mi casa)"
+                    value={newDestinationName}
+                    onChange={(e) => setNewDestinationName(e.target.value)}
+                    maxLength={30}
+                    className="h-[52px] bg-[#14141C] border-[#2A2A38] focus:border-[#39FF6E]/50 rounded-xl"
+                  />
+                  <div className="relative group flex items-center gap-2">
+                    <AddressAutocomplete
+                      value={addressSearch}
+                      onChange={setAddressSearch}
+                      onSelect={(name, lat, lng) => {
+                        setAddressSearch(name);
+                        setNewDestinationLat(lat);
+                        setNewDestinationLng(lng);
+                      }}
+                      placeholder="Buscar ubicación..."
+                      className="h-[52px]"
+                    />
+                    <button 
+                      onClick={handleLocateDestination}
+                      disabled={locatingDestination}
+                      className="w-[52px] h-[52px] shrink-0 flex items-center justify-center bg-[#1E1E2A] rounded-xl text-[#39FF6E] hover:bg-[#2A2A38] transition-colors border border-[#2A2A38] focus:border-[#39FF6E]/50 disabled:opacity-50"
+                      title="Usar mi ubicación actual"
+                    >
+                      {locatingDestination ? <Loader2 size={20} className="animate-spin" /> : <Navigation size={20} />}
+                    </button>
+                  </div>
+                </div>
+                {newDestinationLat && newDestinationLng && (
+                  <p className="text-[11px] text-[#39FF6E] text-right font-mono -mt-1 tracking-wide">
+                    Coordenadas obtenidas ✓
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setShowAddDestination(false)} className="flex-1 h-[48px] border-[#2A2A38] text-[#8888AA]">
+                    Cancelar
+                  </Button>
+                  <Button type="button" variant="primary" onClick={handleAddDestination} disabled={savingDestination} className="flex-1 h-[48px]">
+                    {savingDestination ? <Loader2 size={18} className="animate-spin" /> : "Guardar"}
+                  </Button>
+                </div>
+              </motion.div>
+            ) : destinations.length < 4 ? (
+              <div className="px-2 pb-2 pt-1">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAddDestination(true)}
+                  className="w-full border-dashed border-[#2A2A38] text-[#8888AA] hover:border-[#39FF6E]/50 hover:text-[#39FF6E] hover:bg-[#39FF6E]/5 h-[48px] text-[14px] transition-all group"
+                >
+                  <Plus size={18} className="mr-2 group-hover:rotate-90 transition-transform duration-300" />
+                  Agregar destino
                 </Button>
               </div>
             ) : null}
