@@ -7,8 +7,10 @@ import { useSession } from "../context/SessionContext";
 import {
   startBathroomTimer,
   markBathroomReturn,
+  getActiveBathroomTimer
 } from "../../services/safety.service";
 import type { BathroomTimer } from "../../lib/database.types";
+import { supabase } from "../../lib/supabase";
 import { toast } from "sonner";
 
 const CIRCUMFERENCE = 2 * Math.PI * 130;
@@ -34,12 +36,31 @@ export function BathroomMode() {
     progress > 0.4 ? "rgba(255,215,0,0.5)" : progress > 0.15 ? "rgba(255,140,0,0.5)" : "rgba(255,59,48,0.6)";
   const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
 
+  const runTimerLocal = useCallback((expiresAt: string, currentMin: number) => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    
+    const updateTime = () => {
+      const now = Date.now();
+      const expires = new Date(expiresAt).getTime();
+      const left = Math.max(0, Math.floor((expires - now) / 1000));
+      
+      setSecondsLeft(left);
+      if (left <= 0) {
+        clearInterval(intervalRef.current!);
+        setTimerState("expired");
+      } else {
+        setTimerState("running");
+      }
+    };
+    
+    setSelectedMin(currentMin);
+    updateTime();
+    intervalRef.current = setInterval(updateTime, 1000);
+  }, []);
+
   const startTimer = useCallback(async (min: number) => {
     if (!user || !sessionId) { toast.error("Sin sesión activa"); return; }
-    if (intervalRef.current) clearInterval(intervalRef.current);
-
-    setSecondsLeft(min * 60);
-
+    
     try {
       const t = await startBathroomTimer({
         sessionId,
@@ -47,43 +68,63 @@ export function BathroomMode() {
         durationMinutes: min,
       });
       setDbTimer(t);
-      setTimerState("running");
-
-      intervalRef.current = setInterval(() => {
-        setSecondsLeft((s) => {
-          if (s <= 1) {
-            clearInterval(intervalRef.current!);
-            setTimerState("expired");
-            return 0;
-          }
-          return s - 1;
-        });
-      }, 1000);
+      runTimerLocal(t.expires_at, min);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error al iniciar timer");
     }
-  }, [user, sessionId]);
+  }, [user, sessionId, runTimerLocal]);
 
   useEffect(() => {
-    startTimer(selectedMin);
+    async function init() {
+      if (!user || !sessionId) return;
+      const existing = await getActiveBathroomTimer(sessionId, user.id);
+      if (existing) {
+        setDbTimer(existing);
+        runTimerLocal(existing.expires_at, existing.duration_minutes);
+      } else {
+        startTimer(selectedMin);
+      }
+    }
+    init();
+    
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sessionId, user]);
 
   const handleSelectMin = (min: number) => {
     setSelectedMin(min);
     startTimer(min);
   };
 
-  const addTime = () => {
-    setSecondsLeft((s) => s + 5 * 60);
-    if (timerState === "expired") { setTimerState("running"); startTimer(5); }
+  const addTime = async () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (!dbTimer || !user || !sessionId) return;
+    
+    const addedMinutes = 5;
+    const currentExpires = new Date(dbTimer.expires_at).getTime();
+    // If it was already expired, start from now
+    const baseTime = currentExpires > Date.now() ? currentExpires : Date.now();
+    const newExpiresAt = new Date(baseTime + addedMinutes * 60 * 1000).toISOString();
+    
+    const newTimer = { ...dbTimer, expires_at: newExpiresAt, duration_minutes: dbTimer.duration_minutes + addedMinutes };
+    setDbTimer(newTimer);
+    runTimerLocal(newExpiresAt, selectedMin + addedMinutes);
+
+    try {
+      await (supabase.from("bathroom_timers") as any).update({ 
+        expires_at: newExpiresAt, 
+        duration_minutes: newTimer.duration_minutes 
+      }).eq("id", dbTimer.id);
+    } catch (e) {
+      console.error("Failed to add time to DB", e);
+    }
   };
 
   const handleReturn = async () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (dbTimer && user && sessionId) {
-      await markBathroomReturn(dbTimer.id, sessionId, user.id).catch(console.error);
+    if (user && sessionId) {
+      // Mark all active timers for this user as returned
+      await markBathroomReturn(sessionId, user.id).catch(console.error);
     }
     navigate(`/radar?sid=${sessionId}`);
   };

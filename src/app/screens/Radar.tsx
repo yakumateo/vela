@@ -26,11 +26,11 @@ type MemberState = "safe" | "warning" | "danger" | "bathroom" | "taxi" | "offlin
 
 function getMemberState(status: string, lastSeen: string | null, isPanic: boolean): MemberState {
   if (isPanic) return "danger";
-  if (status === "bathroom") return "bathroom";
-  if (status === "taxi") return "taxi";
   if (!lastSeen) return "offline";
   const diff = Date.now() - new Date(lastSeen).getTime();
   if (diff > 60 * 1000) return "offline";
+  if (status === "bathroom") return "bathroom";
+  if (status === "taxi") return "taxi";
   return "safe";
 }
 
@@ -114,6 +114,8 @@ export function Radar() {
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [processingOptions, setProcessingOptions] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const [isSheetExpanded, setIsSheetExpanded] = useState(false);
 
   // Poll for "hace X seg" text updates
   useEffect(() => {
@@ -274,8 +276,12 @@ export function Radar() {
         </div>
       </div>
 
-      {/* Radar map area (~60% of screen) */}
-      <div className="flex-1 flex flex-col items-center justify-center relative w-full overflow-hidden bg-[#0a0a1a]">
+      {/* Radar map area */}
+      <motion.div 
+        animate={{ paddingBottom: isSheetExpanded ? "50vh" : "152px" }}
+        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+        className="flex-1 flex flex-col items-center justify-center relative w-full overflow-hidden bg-[#0a0a1a]"
+      >
         <div className="absolute top-4 left-4 text-[#8888AA] text-[10px] flex items-center gap-1.5 z-10 bg-[#0A0A0F]/50 px-2 py-1 rounded-md border border-[#2A2A38]/50 shadow-sm backdrop-blur-md">
           <Navigation size={10} />
           <span>Ubicación aproximada</span>
@@ -364,54 +370,127 @@ export function Radar() {
              )
            })}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Lista compañeros + Action buttons (Compact Bottom Sheet) */}
-      <div className="bg-[#14141C] border-t border-[#2A2A38]/80 px-4 pt-4 pb-6 shrink-0 z-20 relative shadow-[0_-12px_48px_rgba(0,0,0,0.5)]">
-        <div className="flex overflow-x-auto no-scrollbar gap-3 mb-4 pb-2 -mx-4 px-4">
-          {localMembers.map((member) => {
-            const isMe = member.user_id === user?.id;
-            const name = isMe ? "Tú" : (member.profiles?.full_name?.split(" ")[0] || "Usuario");
-            const avatar = member.profiles?.avatar_url || AVATAR_PLACEHOLDER(name);
-            const isPanic = activePanic?.user_id === member.user_id;
-            const state = getMemberState(member.status, member.last_seen_at, isPanic);
-            const color = STATE_COLORS[state];
-            const label = isMe ? "Activo" : STATE_LABELS[state];
-
-            return (
-              <div key={member.id} className="snap-start flex flex-col items-center gap-1.5 p-2 rounded-[18px] bg-[#1E1E2A] min-w-[76px] border border-[#2A2A38]/50 shrink-0 shadow-sm">
-                <div className="relative">
-                  <img src={avatar} className="w-11 h-11 rounded-full object-cover border-[2px] border-[#2A2A38]" onError={(e) => { (e.target as HTMLImageElement).src = AVATAR_PLACEHOLDER(name); }} />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-[2px] border-[#1E1E2A]" style={{ backgroundColor: color }} />
-                </div>
-                <div className="flex flex-col items-center w-full">
-                  <span className="font-bold text-[11px] text-[#F0F0F5] w-full text-center truncate px-1">{name}</span>
-                  <span className="text-[9px] font-semibold tracking-wide" style={{ color }}>{label}</span>
-                </div>
-              </div>
-            );
-          })}
+      {/* Draggable Bottom Sheet */}
+      <motion.div 
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={0.2}
+        onDragEnd={(e, info) => {
+          if (info.offset.y < -30) setIsSheetExpanded(true);
+          if (info.offset.y > 30) setIsSheetExpanded(false);
+        }}
+        animate={{ height: isSheetExpanded ? "50vh" : "152px" }}
+        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+        className="absolute bottom-0 w-full bg-[#14141C] border-t border-[#2A2A38]/80 rounded-t-[32px] z-40 shadow-[0_-12px_48px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden"
+      >
+        {/* Handle */}
+        <div 
+          className="w-full flex justify-center pt-4 pb-3 cursor-grab active:cursor-grabbing shrink-0"
+          onClick={() => setIsSheetExpanded(!isSheetExpanded)}
+        >
+          <div className="w-12 h-1.5 bg-[#2A2A38] rounded-full opacity-60" />
         </div>
 
-        {/* Action buttons compactos */}
-        <div className="flex gap-2">
-          <Link to={`/bathroom?sid=${sessionId}`} className="flex-1">
-            <Button variant="secondary" className="h-[48px] rounded-[14px] w-full text-[13px] font-bold bg-[#1E1E2A] hover:bg-[#2A2A38] border border-[#2A2A38]/50 flex items-center justify-center gap-2 transition-all shadow-sm">
-              <span className="text-[16px]">🚽</span> Baño
-            </Button>
-          </Link>
-          <Link to={`/taxi?sid=${sessionId}`} className="flex-1">
-            <Button variant="secondary" className="h-[48px] rounded-[14px] w-full text-[13px] font-bold bg-[#1E1E2A] hover:bg-[#2A2A38] border border-[#2A2A38]/50 flex items-center justify-center gap-2 transition-all shadow-sm">
-              <span className="text-[16px]">🚕</span> Taxi
-            </Button>
-          </Link>
-          <Link to={`/panic?sid=${sessionId}`} className="flex-1">
-            <Button variant="danger" className="h-[48px] rounded-[14px] w-full text-[13px] font-extrabold shadow-[0_4px_16px_rgba(239,68,68,0.2)] hover:shadow-[0_6px_24px_rgba(239,68,68,0.4)] flex items-center justify-center gap-1.5 transition-all">
-              <TriangleAlert size={16} strokeWidth={3} /> Pánico
-            </Button>
-          </Link>
+        <div className="flex-1 flex flex-col px-4 pb-6 overflow-hidden relative">
+          
+          {/* Simple Members List (Visible when collapsed) */}
+          <motion.div 
+            initial={false}
+            animate={{ 
+              height: isSheetExpanded ? 0 : "auto",
+              opacity: isSheetExpanded ? 0 : 1,
+              marginBottom: isSheetExpanded ? 0 : 16
+            }}
+            className="flex justify-center gap-2 overflow-hidden shrink-0"
+            style={{ pointerEvents: isSheetExpanded ? "none" : "auto" }}
+          >
+            {localMembers.map((member) => {
+              const isPanic = activePanic?.user_id === member.user_id;
+              const state = getMemberState(member.status, member.last_seen_at, isPanic);
+              const color = STATE_COLORS[state];
+              
+              return (
+                <div key={`simple-${member.id}`} className="relative">
+                  {state === "danger" && <div className="absolute -inset-1 rounded-full blur-sm animate-pulse" style={{ background: `${color}80` }} />}
+                  <div className="w-8 h-8 rounded-full border-[2.5px] shadow-sm relative z-10" style={{ borderColor: color, backgroundColor: "#1E1E2A" }}>
+                     <img src={member.profiles?.avatar_url || AVATAR_PLACEHOLDER(member.profiles?.full_name?.split(" ")[0] || "?")} className="w-full h-full rounded-full object-cover" />
+                  </div>
+                </div>
+              );
+            })}
+          </motion.div>
+
+          {/* Full Members List (Visible when expanded) */}
+          <motion.div 
+            initial={false}
+            animate={{ 
+              height: isSheetExpanded ? "auto" : 0,
+              opacity: isSheetExpanded ? 1 : 0,
+              marginBottom: isSheetExpanded ? 24 : 0
+            }}
+            className="flex overflow-x-auto no-scrollbar gap-3 -mx-4 px-4 shrink-0"
+            style={{ pointerEvents: isSheetExpanded ? "auto" : "none" }}
+          >
+            {localMembers.map((member) => {
+              const isMe = member.user_id === user?.id;
+              const name = isMe ? "Tú" : (member.profiles?.full_name?.split(" ")[0] || "Usuario");
+              const avatar = member.profiles?.avatar_url || AVATAR_PLACEHOLDER(name);
+              const isPanic = activePanic?.user_id === member.user_id;
+              const state = getMemberState(member.status, member.last_seen_at, isPanic);
+              const color = STATE_COLORS[state];
+              const label = isMe ? (state === "safe" ? "Activo" : STATE_LABELS[state]) : STATE_LABELS[state];
+
+              return (
+                <div key={member.id} className="snap-start flex flex-col items-center gap-1.5 p-2 rounded-[18px] bg-[#1E1E2A] min-w-[76px] border border-[#2A2A38]/50 shrink-0 shadow-sm">
+                  <div className="relative">
+                    <img src={avatar} className="w-11 h-11 rounded-full object-cover border-[2px] border-[#2A2A38]" onError={(e) => { (e.target as HTMLImageElement).src = AVATAR_PLACEHOLDER(name); }} />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-[2px] border-[#1E1E2A]" style={{ backgroundColor: color }} />
+                  </div>
+                  <div className="flex flex-col items-center w-full">
+                    <span className="font-bold text-[11px] text-[#F0F0F5] w-full text-center truncate px-1">{name}</span>
+                    <span className="text-[9px] font-semibold tracking-wide" style={{ color }}>{label}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </motion.div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 shrink-0 mt-auto">
+            <Link to={`/bathroom?sid=${sessionId}`} className="flex-1">
+              <motion.button 
+                animate={{ height: isSheetExpanded ? 64 : 48, borderRadius: isSheetExpanded ? 20 : 14 }}
+                className="w-full bg-[#1E1E2A] hover:bg-[#2A2A38] border border-[#2A2A38]/50 flex items-center justify-center gap-2 transition-colors shadow-sm text-[#F0F0F5] font-bold"
+              >
+                <motion.span animate={{ fontSize: isSheetExpanded ? 20 : 16 }}>🚽</motion.span>
+                <motion.span animate={{ fontSize: isSheetExpanded ? 15 : 13 }}>Baño</motion.span>
+              </motion.button>
+            </Link>
+            <Link to={`/taxi?sid=${sessionId}`} className="flex-1">
+              <motion.button 
+                animate={{ height: isSheetExpanded ? 64 : 48, borderRadius: isSheetExpanded ? 20 : 14 }}
+                className="w-full bg-[#1E1E2A] hover:bg-[#2A2A38] border border-[#2A2A38]/50 flex items-center justify-center gap-2 transition-colors shadow-sm text-[#F0F0F5] font-bold"
+              >
+                <motion.span animate={{ fontSize: isSheetExpanded ? 20 : 16 }}>🚕</motion.span>
+                <motion.span animate={{ fontSize: isSheetExpanded ? 15 : 13 }}>Taxi</motion.span>
+              </motion.button>
+            </Link>
+            <Link to={`/panic?sid=${sessionId}`} className="flex-1">
+              <motion.button 
+                animate={{ height: isSheetExpanded ? 64 : 48, borderRadius: isSheetExpanded ? 20 : 14 }}
+                className="w-full bg-[#ef4444] hover:bg-[#ef4444]/90 shadow-[0_4px_16px_rgba(239,68,68,0.2)] hover:shadow-[0_6px_24px_rgba(239,68,68,0.4)] flex items-center justify-center gap-1.5 transition-colors text-white font-extrabold"
+              >
+                <motion.div animate={{ scale: isSheetExpanded ? 1.1 : 1 }} className="flex items-center justify-center">
+                  <TriangleAlert size={isSheetExpanded ? 20 : 16} strokeWidth={3} />
+                </motion.div>
+                <motion.span animate={{ fontSize: isSheetExpanded ? 15 : 13 }}>Pánico</motion.span>
+              </motion.button>
+            </Link>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
       {showCodeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

@@ -90,24 +90,39 @@ export async function startBathroomTimer(params: {
 }
 
 export async function markBathroomReturn(
-  timerId: string,
   sessionId: string,
   userId: string
-): Promise<BathroomTimer> {
-  const { data, error } = await (supabase
+): Promise<void> {
+  const { error } = await (supabase
     .from("bathroom_timers") as any)
     .update({ returned_at: new Date().toISOString() })
-    .eq("id", timerId)
-    .select()
-    .single();
+    .eq("session_id", sessionId)
+    .eq("user_id", userId)
+    .is("returned_at", null);
   if (error) throw error;
 
   // Restore to active
   await (supabase
     .from("session_members") as any)
-    .update({ status: "active" })
+    .update({ status: "active", last_seen_at: new Date().toISOString() })
     .eq("session_id", sessionId)
     .eq("user_id", userId);
+}
 
-  return data as BathroomTimer;
+export async function getActiveBathroomTimer(
+  sessionId: string,
+  userId: string
+): Promise<BathroomTimer | null> {
+  const { data, error } = await supabase
+    .from("bathroom_timers")
+    .select("*")
+    .eq("session_id", sessionId)
+    .eq("user_id", userId)
+    .is("returned_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
 }
