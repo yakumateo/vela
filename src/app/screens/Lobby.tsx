@@ -3,6 +3,7 @@ import { QrCode, Shield, CheckCircle2, MoreVertical, Loader2, ArrowLeft, LogOut,
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { Button } from "../components/ui/button";
 import { motion } from "motion/react";
+import QRCode from "react-qr-code";
 import { useAuth } from "../context/AuthContext";
 import { useSession } from "../context/SessionContext";
 import {
@@ -235,7 +236,16 @@ export function Lobby() {
         >
           <div className="w-[200px] h-[200px] bg-white rounded-[24px] p-4 flex items-center justify-center mb-6 shadow-[0_8px_32px_rgba(255,255,255,0.15)] relative group">
             <div className="absolute inset-0 bg-[#39FF6E]/20 blur-[30px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[24px]" />
-            <QrCode size={160} className="text-black relative z-10" />
+            {sessionData?.code ? (
+              <QRCode 
+                value={`${window.location.origin}/?join=${sessionData.code}`} 
+                size={160} 
+                level="Q" 
+                className="relative z-10" 
+              />
+            ) : (
+              <QrCode size={160} className="text-black relative z-10" />
+            )}
           </div>
           <p className="text-[#8888AA] text-[15px] mb-3 font-medium tracking-wide">Comparte el código</p>
           <div className="bg-[#0A0A0F] border border-[#39FF6E]/30 px-8 py-3 rounded-2xl mb-4">
