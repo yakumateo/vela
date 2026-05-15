@@ -34,15 +34,17 @@ export function BathroomMode() {
     progress > 0.4 ? "rgba(255,215,0,0.5)" : progress > 0.15 ? "rgba(255,140,0,0.5)" : "rgba(255,59,48,0.6)";
   const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
 
-  const startTimer = useCallback(async () => {
+  const startTimer = useCallback(async (min: number) => {
     if (!user || !sessionId) { toast.error("Sin sesión activa"); return; }
     if (intervalRef.current) clearInterval(intervalRef.current);
+
+    setSecondsLeft(min * 60);
 
     try {
       const t = await startBathroomTimer({
         sessionId,
         userId: user.id,
-        durationMinutes: selectedMin,
+        durationMinutes: min,
       });
       setDbTimer(t);
       setTimerState("running");
@@ -60,25 +62,22 @@ export function BathroomMode() {
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Error al iniciar timer");
     }
-  }, [user, sessionId, selectedMin]);
+  }, [user, sessionId]);
 
   useEffect(() => {
-    setSecondsLeft(selectedMin * 60);
-    startTimer();
+    startTimer(selectedMin);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSelectMin = (min: number) => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
     setSelectedMin(min);
-    setSecondsLeft(min * 60);
-    setTimerState("idle");
+    startTimer(min);
   };
 
   const addTime = () => {
     setSecondsLeft((s) => s + 5 * 60);
-    if (timerState === "expired") { setTimerState("running"); startTimer(); }
+    if (timerState === "expired") { setTimerState("running"); startTimer(5); }
   };
 
   const handleReturn = async () => {
@@ -194,29 +193,20 @@ export function BathroomMode() {
           </p>
           <div className="flex gap-3">
             {[5, 10, 15].map((min) => {
-              const active = selectedMin === min && timerState === "idle";
+              const active = selectedMin === min;
               return (
                 <button
                   key={min}
                   onClick={() => handleSelectMin(min)}
-                  disabled={timerState === "running"}
                   className={`px-5 py-2.5 rounded-full font-bold text-[15px] border transition-all
                     ${active ? "bg-[#FFD700]/10 text-[#FFD700] border-[#FFD700]/30 shadow-[0_0_16px_rgba(255,215,0,0.15)]" : "bg-[#1E1E2A] text-[#8888AA] border-[#2A2A38]"}
-                    disabled:opacity-40 disabled:cursor-not-allowed`}
+                    hover:border-[#FFD700]/50`}
                 >
                   {min} min
                 </button>
               );
             })}
           </div>
-          {timerState === "idle" && (
-            <button
-              onClick={startTimer}
-              className="mt-5 px-8 py-3 rounded-full bg-[#FFD700]/10 text-[#FFD700] font-bold text-[15px] border border-[#FFD700]/30 hover:bg-[#FFD700]/20 transition-all shadow-[0_0_20px_rgba(255,215,0,0.15)]"
-            >
-              ▶ Iniciar timer
-            </button>
-          )}
         </div>
 
         {/* Group status badge */}
