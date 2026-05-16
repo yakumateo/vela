@@ -7,8 +7,8 @@ export async function triggerPanic(
   lat?: number,
   lng?: number
 ): Promise<PanicAlert> {
-  const { data, error } = await supabase
-    .from("panic_alerts")
+  const { data, error } = await (supabase
+    .from("panic_alerts") as any)
     .insert({
       session_id: sessionId,
       user_id: userId,
@@ -20,24 +20,23 @@ export async function triggerPanic(
   if (error) throw error;
 
   // Also update member status to signal panic
-  await supabase
-    .from("session_members")
+  await (supabase
+    .from("session_members") as any)
     .update({ status: "active", last_seen_at: new Date().toISOString() })
     .eq("session_id", sessionId)
     .eq("user_id", userId);
 
-  return data;
+  return data as PanicAlert;
 }
 
-export async function resolvePanic(alertId: string): Promise<PanicAlert> {
-  const { data, error } = await supabase
-    .from("panic_alerts")
+export async function resolvePanic(sessionId: string, userId: string): Promise<void> {
+  const { error } = await (supabase
+    .from("panic_alerts") as any)
     .update({ resolved_at: new Date().toISOString() })
-    .eq("id", alertId)
-    .select()
-    .single();
+    .eq("session_id", sessionId)
+    .eq("user_id", userId)
+    .is("resolved_at", null);
   if (error) throw error;
-  return data;
 }
 
 export async function getActivePanic(

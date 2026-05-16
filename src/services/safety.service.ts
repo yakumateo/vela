@@ -13,8 +13,8 @@ export async function registerTaxi(params: {
   destinationLng?: number;
   etaMinutes: number;
 }): Promise<TaxiRegistration> {
-  const { data, error } = await supabase
-    .from("taxi_registrations")
+  const { data, error } = await (supabase
+    .from("taxi_registrations") as any)
     .insert({
       session_id: params.sessionId,
       user_id: params.userId,
@@ -30,13 +30,13 @@ export async function registerTaxi(params: {
   if (error) throw error;
 
   // Update member status to taxi
-  await supabase
-    .from("session_members")
+  await (supabase
+    .from("session_members") as any)
     .update({ status: "taxi" })
     .eq("session_id", params.sessionId)
     .eq("user_id", params.userId);
 
-  return data;
+  return data as TaxiRegistration;
 }
 
 export async function getLatestTaxi(
@@ -67,8 +67,8 @@ export async function startBathroomTimer(params: {
     Date.now() + params.durationMinutes * 60 * 1000
   ).toISOString();
 
-  const { data, error } = await supabase
-    .from("bathroom_timers")
+  const { data, error } = await (supabase
+    .from("bathroom_timers") as any)
     .insert({
       session_id: params.sessionId,
       user_id: params.userId,
@@ -80,34 +80,49 @@ export async function startBathroomTimer(params: {
   if (error) throw error;
 
   // Update member status
-  await supabase
-    .from("session_members")
+  await (supabase
+    .from("session_members") as any)
     .update({ status: "bathroom" })
     .eq("session_id", params.sessionId)
     .eq("user_id", params.userId);
 
-  return data;
+  return data as BathroomTimer;
 }
 
 export async function markBathroomReturn(
-  timerId: string,
   sessionId: string,
   userId: string
-): Promise<BathroomTimer> {
-  const { data, error } = await supabase
-    .from("bathroom_timers")
+): Promise<void> {
+  const { error } = await (supabase
+    .from("bathroom_timers") as any)
     .update({ returned_at: new Date().toISOString() })
-    .eq("id", timerId)
-    .select()
-    .single();
+    .eq("session_id", sessionId)
+    .eq("user_id", userId)
+    .is("returned_at", null);
   if (error) throw error;
 
   // Restore to active
-  await supabase
-    .from("session_members")
-    .update({ status: "active" })
+  await (supabase
+    .from("session_members") as any)
+    .update({ status: "active", last_seen_at: new Date().toISOString() })
     .eq("session_id", sessionId)
     .eq("user_id", userId);
+}
 
+export async function getActiveBathroomTimer(
+  sessionId: string,
+  userId: string
+): Promise<BathroomTimer | null> {
+  const { data, error } = await supabase
+    .from("bathroom_timers")
+    .select("*")
+    .eq("session_id", sessionId)
+    .eq("user_id", userId)
+    .is("returned_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
   return data;
 }

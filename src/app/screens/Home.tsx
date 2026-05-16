@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { Button } from "../components/ui/button";
 import { Header } from "../components/Header";
 import { motion } from "motion/react";
+import { AddressAutocomplete } from "../components/AddressAutocomplete";
 import { useAuth } from "../context/AuthContext";
 import { useSession } from "../context/SessionContext";
 import { createSession } from "../../services/session.service";
@@ -90,10 +91,10 @@ export function Home() {
   const containerVariants = {
     hidden: { opacity: 0 },
     show: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
-  };
+  } as const;
   const itemVariants = {
     hidden: { opacity: 0, y: 16 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
+    show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } },
   };
 
   return (
@@ -216,12 +217,12 @@ export function Home() {
                   onChange={(e) => setSessionName(e.target.value)}
                   className="h-[52px] bg-[#0A0A0F] rounded-xl text-[#F0F0F5] px-4 text-[15px] outline-none border border-[#2A2A38] focus:border-[#39FF6E]/50 transition-colors placeholder:text-[#8888AA]"
                 />
-                <input
-                  type="text"
-                  placeholder="📍 Lugar (opcional)"
+                <AddressAutocomplete
                   value={sessionVenue}
-                  onChange={(e) => setSessionVenue(e.target.value)}
-                  className="h-[52px] bg-[#0A0A0F] rounded-xl text-[#F0F0F5] px-4 text-[15px] outline-none border border-[#2A2A38] focus:border-[#39FF6E]/50 transition-colors placeholder:text-[#8888AA]"
+                  onChange={setSessionVenue}
+                  onSelect={(name) => setSessionVenue(name)}
+                  placeholder="📍 Lugar (opcional)"
+                  className="!h-[52px] !rounded-xl !bg-[#0A0A0F]"
                 />
                 <div className="flex gap-2">
                   <Button

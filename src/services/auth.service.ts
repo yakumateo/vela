@@ -68,14 +68,14 @@ export async function updateProfile(
   userId: string,
   updates: Partial<Pick<Profile, "full_name" | "phone" | "avatar_url" | "safe_word">>
 ) {
-  const { data, error } = await supabase
-    .from("profiles")
+  const { data, error } = await (supabase
+    .from("profiles") as any)
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", userId)
     .select()
     .single();
   if (error) throw error;
-  return data;
+  return data as Profile;
 }
 
 export async function uploadAvatar(userId: string, file: File) {

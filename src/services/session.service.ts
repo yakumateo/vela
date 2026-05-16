@@ -172,8 +172,8 @@ export async function leaveSession(sessionId: string, userId: string) {
 }
 
 export async function endSession(sessionId: string) {
-  const { error } = await supabase
-    .from("sessions")
+  const { error } = await (supabase
+    .from("sessions") as any)
     .update({ status: "ended", ended_at: new Date().toISOString() })
     .eq("id", sessionId);
   if (error) throw error;
