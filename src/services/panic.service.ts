@@ -29,15 +29,14 @@ export async function triggerPanic(
   return data as PanicAlert;
 }
 
-export async function resolvePanic(alertId: string): Promise<PanicAlert> {
-  const { data, error } = await (supabase
+export async function resolvePanic(sessionId: string, userId: string): Promise<void> {
+  const { error } = await (supabase
     .from("panic_alerts") as any)
     .update({ resolved_at: new Date().toISOString() })
-    .eq("id", alertId)
-    .select()
-    .single();
+    .eq("session_id", sessionId)
+    .eq("user_id", userId)
+    .is("resolved_at", null);
   if (error) throw error;
-  return data as PanicAlert;
 }
 
 export async function getActivePanic(

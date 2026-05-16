@@ -50,10 +50,10 @@ export function PanicAlert() {
   }, []);
 
   const handleCancel = async () => {
-    if (!alert) { navigate(`/radar?sid=${sessionId}`); return; }
+    if (!alert || !user) { navigate(`/radar?sid=${sessionId}`); return; }
     setCancelling(true);
     try {
-      await resolvePanic(alert.id);
+      await resolvePanic(sessionId, user.id);
       toast.success("Alerta cancelada");
       navigate(`/radar?sid=${sessionId}`);
     } catch (e: unknown) {
